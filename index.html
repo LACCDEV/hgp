@@ -1,85 +1,280 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>3D Punktwolke Visualisierung</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    #input-area {
-      margin-bottom: 20px;
-    }
-    input {
-      width: 60px;
-      margin-right: 10px;
-    }
-    #plot {
-      width: 100%;
-      height: 600px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEP Datei Viewer</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            box-sizing: border-box; 
+        }
+        #container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            overflow: hidden; 
+        }
+        #viewer { 
+            flex: 1; 
+            background-color: #f0f0f0; 
+        }
+        #controls { 
+            padding: 10px; 
+            background-color: #eee; 
+            border-bottom: 1px solid #ccc; 
+        }
+        #status { 
+            padding: 10px; 
+            background-color: #eee; 
+            color: #666; 
+            font-size: 14px; 
+        }
+        button { 
+            padding: 8px 15px; 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        button:hover { 
+            background-color: #45a049; 
+        }
+        input[type="file"] { 
+            display: none; 
+        }
+        .file-upload { 
+            padding: 8px 15px; 
+            background-color: #2196F3; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            display: inline-block; 
+        }
+        .file-upload:hover { 
+            background-color: #0b7dda; 
+        }
+    </style>
 </head>
 <body>
-  <h2>3D Punktwolke Visualisierung</h2>
-  <div id="input-area">
-    <label>X: <input type="number" id="x-input" step="any"></label>
-    <label>Y: <input type="number" id="y-input" step="any"></label>
-    <label>Z: <input type="number" id="z-input" step="any"></label>
-    <button onclick="addPoint()">Punkt hinzufügen</button>
-  </div>
+    <h1>STEP Datei Viewer</h1>
+    <div id="container">
+        <div id="controls">
+            <label for="stepFile" class="file-upload">STEP Datei auswählen</label>
+            <input type="file" id="stepFile" accept=".step,.stp" />
+            <button id="resetBtn">Zurücksetzen</button>
+        </div>
+        <div id="viewer"></div>
+        <div id="status">Bereit zum Hochladen einer STEP-Datei (.step oder .stp)</div>
+    </div>
 
-  <div id="plot"></div>
+    <!-- Drei.js Bibliothek -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <!-- STEP-js Bibliothek -->
+    <script src="https://cdn.jsdelivr.net/npm/step-js@0.0.6/dist/step.min.js"></script>
 
-  <script>
-    let xData = [];
-    let yData = [];
-    let zData = [];
-
-    function drawPlot() {
-      const trace = {
-        x: xData,
-        y: yData,
-        z: zData,
-        mode: 'markers',
-        marker: {
-          size: 5,
-          color: zData,
-          colorscale: 'Viridis',
-          opacity: 0.8
-        },
-        type: 'scatter3d'
-      };
-
-      const layout = {
-        margin: { l: 0, r: 0, b: 0, t: 0 }
-      };
-
-      Plotly.newPlot('plot', [trace], layout);
-    }
-
-    function addPoint() {
-      const x = parseFloat(document.getElementById('x-input').value);
-      const y = parseFloat(document.getElementById('y-input').value);
-      const z = parseFloat(document.getElementById('z-input').value);
-
-      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-        xData.push(x);
-        yData.push(y);
-        zData.push(z);
-        drawPlot();
-      } else {
-        alert("Bitte gültige Zahlen für X, Y und Z eingeben.");
-      }
-
-      document.getElementById('x-input').value = '';
-      document.getElementById('y-input').value = '';
-      document.getElementById('z-input').value = '';
-    }
-
-    drawPlot(); // Initial leer
-  </script>
+    <script>
+        // Globale Variablen
+        let scene, camera, renderer, controls;
+        let stepFileInput, resetBtn, statusDiv, viewerDiv;
+        
+        // Initialisierung beim Laden der Seite
+        document.addEventListener('DOMContentLoaded', function() {
+            // UI-Elemente referenzieren
+            stepFileInput = document.getElementById('stepFile');
+            resetBtn = document.getElementById('resetBtn');
+            statusDiv = document.getElementById('status');
+            viewerDiv = document.getElementById('viewer');
+            
+            // Event Listener hinzufügen
+            stepFileInput.addEventListener('change', handleFileSelect);
+            resetBtn.addEventListener('click', resetViewer);
+            
+            // 3D-Viewer initialisieren
+            initViewer();
+        });
+        
+        // 3D-Viewer initialisieren
+        function initViewer() {
+            // Szene erstellen
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Kamera erstellen
+            camera = new THREE.PerspectiveCamera(75, viewerDiv.clientWidth / viewerDiv.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // Renderer erstellen
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
+            viewerDiv.appendChild(renderer.domElement);
+            
+            // OrbitControls hinzufügen
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            
+            // Licht hinzufügen
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Achsen-Helfer hinzufügen
+            const axesHelper = new THREE.AxesHelper(1);
+            scene.add(axesHelper);
+            
+            // Grid-Helfer hinzufügen
+            const gridHelper = new THREE.GridHelper(10, 10);
+            scene.add(gridHelper);
+            
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            
+            // Fenstergrößenänderung behandeln
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Fenstergrößenänderung behandeln
+        function onWindowResize() {
+            camera.aspect = viewerDiv.clientWidth / viewerDiv.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
+        }
+        
+        // Dateiauswahl behandeln
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            statusDiv.textContent = `Verarbeite Datei: ${file.name}...`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const stepContent = e.target.result;
+                    processStepFile(stepContent);
+                    statusDiv.textContent = `Angezeigte Datei: ${file.name}`;
+                } catch (error) {
+                    console.error('Fehler beim Verarbeiten der STEP-Datei:', error);
+                    statusDiv.textContent = `Fehler: ${error.message}`;
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // STEP-Datei verarbeiten
+        function processStepFile(stepContent) {
+            // Alte Modelle entfernen
+            scene.traverse(child => {
+                if (child instanceof THREE.Mesh) {
+                    scene.remove(child);
+                }
+            });
+            
+            // STEP-Datei parsen
+            const stepData = STEP.parse(stepContent);
+            const stepModel = new STEP.STEPModel(stepData);
+            
+            // Geometrien aus STEP-Datei erstellen
+            const shapes = stepModel.getShapes();
+            
+            if (shapes.length === 0) {
+                throw new Error('Keine 3D-Objekte in der STEP-Datei gefunden.');
+            }
+            
+            // Durch alle Shapes iterieren und Meshes erstellen
+            shapes.forEach(shape => {
+                const geometry = new THREE.BufferGeometry();
+                
+                // Vertices und Faces aus der Shape extrahieren
+                const vertices = [];
+                const faces = [];
+                
+                shape.tessellate({
+                    onVertex: (x, y, z) => vertices.push(x, y, z),
+                    onFace: (a, b, c) => faces.push(a, b, c)
+                });
+                
+                // Geometry mit den extrahierten Daten füllen
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setIndex(faces);
+                geometry.computeVertexNormals();
+                
+                // Mesh erstellen und zur Szene hinzufügen
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x2196F3,
+                    specular: 0x111111,
+                    shininess: 30,
+                    side: THREE.DoubleSide
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+                
+                // Kamera auf das Modell ausrichten
+                fitCameraToObject(camera, controls, mesh, 1.5);
+            });
+        }
+        
+        // Kamera auf das Objekt ausrichten
+        function fitCameraToObject(camera, controls, object, offset) {
+            const boundingBox = new THREE.Box3().setFromObject(object);
+            const center = boundingBox.getCenter(new THREE.Vector3());
+            const size = boundingBox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * offset;
+            
+            // Sicherstellen, dass die Kamera nicht zu nah ist
+            cameraZ *= 1.5;
+            
+            camera.position.z = center.z + cameraZ;
+            camera.position.x = center.x;
+            camera.position.y = center.y;
+            
+            controls.target.copy(center);
+            controls.update();
+        }
+        
+        // Viewer zurücksetzen
+        function resetViewer() {
+            // Alle Meshes entfernen
+            scene.traverse(child => {
+                if (child instanceof THREE.Mesh && child !== scene.getObjectByName('gridHelper') && child !== scene.getObjectByName('axesHelper')) {
+                    scene.remove(child);
+                }
+            });
+            
+            // Kamera zurücksetzen
+            camera.position.set(0, 0, 5);
+            controls.target.set(0, 0, 0);
+            controls.update();
+            
+            // Datei-Input zurücksetzen
+            stepFileInput.value = '';
+            
+            // Status zurücksetzen
+            statusDiv.textContent = 'Bereit zum Hochladen einer STEP-Datei (.step oder .stp)';
+        }
+    </script>
 </body>
 </html>
