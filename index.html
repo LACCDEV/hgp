@@ -3,277 +3,396 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STEP Datei Viewer</title>
+    <title>Zahnrad-Konfigurator für CAD</title>
     <style>
-        body { 
-            margin: 0; 
-            padding: 20px; 
-            font-family: Arial, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            box-sizing: border-box; 
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        #container { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            border: 1px solid #ccc; 
-            border-radius: 5px; 
-            overflow: hidden; 
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
         }
-        #viewer { 
-            flex: 1; 
-            background-color: #f0f0f0; 
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-        #controls { 
-            padding: 10px; 
-            background-color: #eee; 
-            border-bottom: 1px solid #ccc; 
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        #status { 
-            padding: 10px; 
-            background-color: #eee; 
-            color: #666; 
-            font-size: 14px; 
+        .preview {
+            flex: 2;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        button { 
-            padding: 8px 15px; 
-            background-color: #4CAF50; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer; 
+        .gear-canvas {
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            max-width: 100%;
         }
-        button:hover { 
-            background-color: #45a049; 
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
         }
-        input[type="file"] { 
-            display: none; 
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
-        .file-upload { 
-            padding: 8px 15px; 
-            background-color: #2196F3; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            display: inline-block; 
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
         }
-        .file-upload:hover { 
-            background-color: #0b7dda; 
+        button:hover {
+            background-color: #2980b9;
+        }
+        .download-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .download-options button {
+            flex: 1;
+        }
+        .svg-btn {
+            background-color: #27ae60;
+        }
+        .svg-btn:hover {
+            background-color: #219653;
+        }
+        .dxf-btn {
+            background-color: #e67e22;
+        }
+        .dxf-btn:hover {
+            background-color: #d35400;
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>STEP Datei Viewer</h1>
-    <div id="container">
-        <div id="controls">
-            <label for="stepFile" class="file-upload">STEP Datei auswählen</label>
-            <input type="file" id="stepFile" accept=".step,.stp" />
-            <button id="resetBtn">Zurücksetzen</button>
+    <h1>Zahnrad-Konfigurator für CAD-Konstrukteure</h1>
+    
+    <div class="container">
+        <div class="controls">
+            <h2>Parameter</h2>
+            
+            <label for="module">Modul (mm):</label>
+            <input type="number" id="module" min="0.1" step="0.1" value="1" oninput="updateGear()">
+            
+            <label for="teeth">Zähnezahl:</label>
+            <input type="number" id="teeth" min="5" step="1" value="20" oninput="updateGear()">
+            
+            <label for="pressureAngle">Eingriffswinkel (Grad):</label>
+            <input type="number" id="pressureAngle" min="14.5" max="30" step="0.5" value="20" oninput="updateGear()">
+            
+            <label for="thickness">Dicke (mm):</label>
+            <input type="number" id="thickness" min="1" step="1" value="5" oninput="updateGear()">
+            
+            <label for="hubDiameter">Nabendurchmesser (mm):</label>
+            <input type="number" id="hubDiameter" min="0" step="1" value="10" oninput="updateGear()">
+            
+            <label for="boreDiameter">Bohrungsdurchmesser (mm):</label>
+            <input type="number" id="boreDiameter" min="0" step="0.1" value="5" oninput="updateGear()">
+            
+            <label for="keyway">Keilnut:</label>
+            <select id="keyway" onchange="updateGear()">
+                <option value="none">Keine</option>
+                <option value="din6885">DIN 6885</option>
+            </select>
+            
+            <div id="keywaySizeContainer" style="display: none;">
+                <label for="keywaySize">Keilnut Größe:</label>
+                <select id="keywaySize" onchange="updateGear()">
+                    <option value="3x1.8">3×1,8 mm</option>
+                    <option value="4x2.6">4×2,6 mm</option>
+                    <option value="5x3.0">5×3,0 mm</option>
+                    <option value="6x3.5">6×3,5 mm</option>
+                    <option value="8x4.0">8×4,0 mm</option>
+                    <option value="10x5.0">10×5,0 mm</option>
+                    <option value="12x5.0">12×5,0 mm</option>
+                </select>
+            </div>
+            
+            <button onclick="generateGear()">Zahnrad generieren</button>
+            
+            <div class="download-options">
+                <button class="svg-btn" onclick="downloadSVG()">Als SVG herunterladen</button>
+                <button class="dxf-btn" onclick="downloadDXF()">Als DXF herunterladen</button>
+            </div>
+            
+            <div id="error" class="error"></div>
         </div>
-        <div id="viewer"></div>
-        <div id="status">Bereit zum Hochladen einer STEP-Datei (.step oder .stp)</div>
+        
+        <div class="preview">
+            <h2>Vorschau</h2>
+            <canvas id="gearCanvas" class="gear-canvas" width="500" height="500"></canvas>
+            <div>
+                <strong>Technische Daten:</strong>
+                <div id="gearSpecs">Wird berechnet...</div>
+            </div>
+        </div>
     </div>
-
-    <!-- Drei.js Bibliothek -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-    <!-- STEP-js Bibliothek -->
-    <script src="https://cdn.jsdelivr.net/npm/step-js@0.0.6/dist/step.min.js"></script>
 
     <script>
         // Globale Variablen
-        let scene, camera, renderer, controls;
-        let stepFileInput, resetBtn, statusDiv, viewerDiv;
+        let gearData = null;
+        const canvas = document.getElementById('gearCanvas');
+        const ctx = canvas.getContext('2d');
         
-        // Initialisierung beim Laden der Seite
+        // Initialisierung
         document.addEventListener('DOMContentLoaded', function() {
-            // UI-Elemente referenzieren
-            stepFileInput = document.getElementById('stepFile');
-            resetBtn = document.getElementById('resetBtn');
-            statusDiv = document.getElementById('status');
-            viewerDiv = document.getElementById('viewer');
-            
-            // Event Listener hinzufügen
-            stepFileInput.addEventListener('change', handleFileSelect);
-            resetBtn.addEventListener('click', resetViewer);
-            
-            // 3D-Viewer initialisieren
-            initViewer();
+            updateGear();
+            document.getElementById('keyway').addEventListener('change', function() {
+                document.getElementById('keywaySizeContainer').style.display = 
+                    this.value === 'none' ? 'none' : 'block';
+            });
         });
         
-        // 3D-Viewer initialisieren
-        function initViewer() {
-            // Szene erstellen
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
+        // Zahnradparameter aktualisieren
+        function updateGear() {
+            const module = parseFloat(document.getElementById('module').value);
+            const teeth = parseInt(document.getElementById('teeth').value);
+            const pressureAngle = parseFloat(document.getElementById('pressureAngle').value);
             
-            // Kamera erstellen
-            camera = new THREE.PerspectiveCamera(75, viewerDiv.clientWidth / viewerDiv.clientHeight, 0.1, 1000);
-            camera.position.z = 5;
-            
-            // Renderer erstellen
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
-            viewerDiv.appendChild(renderer.domElement);
-            
-            // OrbitControls hinzufügen
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.25;
-            
-            // Licht hinzufügen
-            const ambientLight = new THREE.AmbientLight(0x404040);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
-            
-            // Achsen-Helfer hinzufügen
-            const axesHelper = new THREE.AxesHelper(1);
-            scene.add(axesHelper);
-            
-            // Grid-Helfer hinzufügen
-            const gridHelper = new THREE.GridHelper(10, 10);
-            scene.add(gridHelper);
-            
-            // Animation Loop
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
+            if (module <= 0 || teeth < 5) {
+                document.getElementById('error').textContent = 
+                    'Ungültige Eingabe: Modul muss > 0 und Zähnezahl ≥ 5 sein.';
+                return;
             }
             
-            animate();
+            document.getElementById('error').textContent = '';
             
-            // Fenstergrößenänderung behandeln
-            window.addEventListener('resize', onWindowResize);
-        }
-        
-        // Fenstergrößenänderung behandeln
-        function onWindowResize() {
-            camera.aspect = viewerDiv.clientWidth / viewerDiv.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
-        }
-        
-        // Dateiauswahl behandeln
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            // Technische Daten berechnen
+            const pitchDiameter = module * teeth;
+            const addendum = module;
+            const dedendum = 1.25 * module;
+            const outerDiameter = pitchDiameter + 2 * addendum;
+            const rootDiameter = pitchDiameter - 2 * dedendum;
             
-            statusDiv.textContent = `Verarbeite Datei: ${file.name}...`;
+            // Technische Daten anzeigen
+            document.getElementById('gearSpecs').innerHTML = `
+                <p>Teilkreisdurchmesser: ${pitchDiameter.toFixed(2)} mm</p>
+                <p>Kopfkreisdurchmesser: ${outerDiameter.toFixed(2)} mm</p>
+                <p>Fußkreisdurchmesser: ${rootDiameter.toFixed(2)} mm</p>
+                <p>Zahnkopfhöhe: ${addendum.toFixed(2)} mm</p>
+                <p>Zahnfußhöhe: ${dedendum.toFixed(2)} mm</p>
+            `;
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const stepContent = e.target.result;
-                    processStepFile(stepContent);
-                    statusDiv.textContent = `Angezeigte Datei: ${file.name}`;
-                } catch (error) {
-                    console.error('Fehler beim Verarbeiten der STEP-Datei:', error);
-                    statusDiv.textContent = `Fehler: ${error.message}`;
-                }
+            // Skalierung für die Vorschau anpassen
+            const scale = Math.min(400 / outerDiameter, 1) * 0.8;
+            gearData = {
+                module,
+                teeth,
+                pressureAngle,
+                pitchDiameter,
+                addendum,
+                dedendum,
+                outerDiameter,
+                rootDiameter,
+                thickness: parseFloat(document.getElementById('thickness').value),
+                hubDiameter: parseFloat(document.getElementById('hubDiameter').value),
+                boreDiameter: parseFloat(document.getElementById('boreDiameter').value),
+                keyway: document.getElementById('keyway').value,
+                keywaySize: document.getElementById('keywaySize').value,
+                scale
             };
-            reader.readAsText(file);
+            
+            drawGearPreview();
         }
         
-        // STEP-Datei verarbeiten
-        function processStepFile(stepContent) {
-            // Alte Modelle entfernen
-            scene.traverse(child => {
-                if (child instanceof THREE.Mesh) {
-                    scene.remove(child);
-                }
-            });
+        // Zahnrad in der Vorschau zeichnen
+        function drawGearPreview() {
+            if (!gearData) return;
             
-            // STEP-Datei parsen
-            const stepData = STEP.parse(stepContent);
-            const stepModel = new STEP.STEPModel(stepData);
+            // Canvas leeren
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Geometrien aus STEP-Datei erstellen
-            const shapes = stepModel.getShapes();
+            // Koordinatenursprung in die Mitte setzen
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
             
-            if (shapes.length === 0) {
-                throw new Error('Keine 3D-Objekte in der STEP-Datei gefunden.');
+            // Skalierung anwenden
+            const displayDiameter = gearData.outerDiameter * gearData.scale;
+            ctx.scale(gearData.scale, gearData.scale);
+            
+            // Zahnrad zeichnen
+            drawGear(ctx, gearData);
+            
+            ctx.restore();
+        }
+        
+        // Zahnrad zeichnen
+        function drawGear(ctx, data) {
+            // Nabendurchmesser und Bohrung zeichnen
+            if (data.hubDiameter > 0) {
+                ctx.beginPath();
+                ctx.arc(0, 0, data.hubDiameter / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#ddd';
+                ctx.fill();
+                ctx.strokeStyle = '#999';
+                ctx.lineWidth = 1 / data.scale;
+                ctx.stroke();
             }
             
-            // Durch alle Shapes iterieren und Meshes erstellen
-            shapes.forEach(shape => {
-                const geometry = new THREE.BufferGeometry();
-                
-                // Vertices und Faces aus der Shape extrahieren
-                const vertices = [];
-                const faces = [];
-                
-                shape.tessellate({
-                    onVertex: (x, y, z) => vertices.push(x, y, z),
-                    onFace: (a, b, c) => faces.push(a, b, c)
-                });
-                
-                // Geometry mit den extrahierten Daten füllen
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-                geometry.setIndex(faces);
-                geometry.computeVertexNormals();
-                
-                // Mesh erstellen und zur Szene hinzufügen
-                const material = new THREE.MeshPhongMaterial({
-                    color: 0x2196F3,
-                    specular: 0x111111,
-                    shininess: 30,
-                    side: THREE.DoubleSide
-                });
-                
-                const mesh = new THREE.Mesh(geometry, material);
-                scene.add(mesh);
-                
-                // Kamera auf das Modell ausrichten
-                fitCameraToObject(camera, controls, mesh, 1.5);
-            });
-        }
-        
-        // Kamera auf das Objekt ausrichten
-        function fitCameraToObject(camera, controls, object, offset) {
-            const boundingBox = new THREE.Box3().setFromObject(object);
-            const center = boundingBox.getCenter(new THREE.Vector3());
-            const size = boundingBox.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * offset;
+            if (data.boreDiameter > 0) {
+                ctx.beginPath();
+                ctx.arc(0, 0, data.boreDiameter / 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1 / data.scale;
+                ctx.stroke();
+            }
             
-            // Sicherstellen, dass die Kamera nicht zu nah ist
-            cameraZ *= 1.5;
+            // Keilnut zeichnen (vereinfacht)
+            if (data.keyway === 'din6885' && data.boreDiameter > 0) {
+                const [width, height] = data.keywaySize.split('x').map(Number);
+                const radius = data.boreDiameter / 2;
+                const keywayDepth = height - radius * (1 - Math.cos(Math.asin(width / (2 * radius))));
+                
+                ctx.beginPath();
+                ctx.moveTo(width / 2, -radius);
+                ctx.lineTo(width / 2, -radius + keywayDepth);
+                ctx.lineTo(-width / 2, -radius + keywayDepth);
+                ctx.lineTo(-width / 2, -radius);
+                ctx.closePath();
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                ctx.strokeStyle = '#666';
+                ctx.stroke();
+            }
             
-            camera.position.z = center.z + cameraZ;
-            camera.position.x = center.x;
-            camera.position.y = center.y;
+            // Zähne zeichnen
+            ctx.beginPath();
+            const angle
+
+            // Zähne zeichnen
+            ctx.beginPath();
+            const angleStep = (2 * Math.PI) / data.teeth;
+            const halfAngleStep = angleStep / 2;
+            const pressureAngleRad = data.pressureAngle * Math.PI / 180;
             
-            controls.target.copy(center);
-            controls.update();
-        }
-        
-        // Viewer zurücksetzen
-        function resetViewer() {
-            // Alle Meshes entfernen
-            scene.traverse(child => {
-                if (child instanceof THREE.Mesh && child !== scene.getObjectByName('gridHelper') && child !== scene.getObjectByName('axesHelper')) {
-                    scene.remove(child);
+            // Zahnform-Parameter
+            const baseRadius = (data.pitchDiameter / 2) * Math.cos(pressureAngleRad);
+            const addendumRadius = (data.pitchDiameter / 2) + data.addendum;
+            const dedendumRadius = (data.pitchDiameter / 2) - data.dedendum;
+            
+            // Zahnflanken als Evolvente approximieren
+            for (let i = 0; i <= data.teeth; i++) {
+                const angle = i * angleStep;
+                const cosAngle = Math.cos(angle);
+                const sinAngle = Math.sin(angle);
+                
+                // Zahnfuß (beginnend bei der Mitte zwischen zwei Zähnen)
+                if (i === 0) {
+                    const startAngle = -halfAngleStep;
+                    const x = dedendumRadius * Math.cos(startAngle);
+                    const y = dedendumRadius * Math.sin(startAngle);
+                    ctx.moveTo(x, y);
                 }
-            });
+                
+                // Linke Flanke (Evolvente)
+                for (let j = 0; j <= 5; j++) {
+                    const t = j / 5 * Math.PI / 2;
+                    const x = baseRadius * (Math.cos(t) + t * Math.sin(t));
+                    const y = baseRadius * (Math.sin(t) - t * Math.cos(t));
+                    const rotatedX = x * cosAngle - y * sinAngle;
+                    const rotatedY = x * sinAngle + y * cosAngle;
+                    
+                    if (j === 0) {
+                        ctx.lineTo(rotatedX, rotatedY);
+                    } else {
+                        ctx.lineTo(rotatedX, rotatedY);
+                    }
+                }
+                
+                // Zahnkopf (Kreisbogen)
+                const headAngle1 = angle + halfAngleStep;
+                const headAngle2 = angle + angleStep - halfAngleStep;
+                ctx.arc(0, 0, addendumRadius, headAngle1, headAngle2);
+                
+                // Rechte Flanke (Evolvente, gespiegelt)
+                for (let j = 5; j >= 0; j--) {
+                    const t = j / 5 * Math.PI / 2;
+                    const x = baseRadius * (Math.cos(t) + t * Math.sin(t));
+                    const y = -baseRadius * (Math.sin(t) - t * Math.cos(t));
+                    const rotatedX = x * cosAngle - y * sinAngle;
+                    const rotatedY = x * sinAngle + y * cosAngle;
+                    ctx.lineTo(rotatedX, rotatedY);
+                }
+            }
             
-            // Kamera zurücksetzen
-            camera.position.set(0, 0, 5);
-            controls.target.set(0, 0, 0);
-            controls.update();
+            // Zahnrad füllen und konturieren
+            ctx.closePath();
+            ctx.fillStyle = '#a5d8ff';
+            ctx.fill();
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 1 / data.scale;
+            ctx.stroke();
+        }
+        
+        // Zahnrad generieren (für Export)
+        function generateGear() {
+            updateGear();
+            if (!gearData) return;
             
-            // Datei-Input zurücksetzen
-            stepFileInput.value = '';
+            // Hier würden Sie die Daten für den Export vorbereiten
+            alert('Zahnrad wurde generiert! Bereit für den Export.');
+        }
+        
+        // Als SVG herunterladen
+        function downloadSVG() {
+            if (!gearData) return;
             
-            // Status zurücksetzen
-            statusDiv.textContent = 'Bereit zum Hochladen einer STEP-Datei (.step oder .stp)';
+            // Hier würden Sie den SVG-Code generieren
+            alert('SVG-Export wird vorbereitet...');
+            // In einer echten Implementierung würden Sie hier:
+            // 1. SVG-Code mit den Zahnradparametern generieren
+            // 2. Einen Download-Link erstellen
+        }
+        
+        // Als DXF herunterladen
+        function downloadDXF() {
+            if (!gearData) return;
+            
+            // Hier würden Sie den DXF-Code generieren
+            alert('DXF-Export wird vorbereitet...');
+            // In einer echten Implementierung würden Sie:
+            // 1. DXF-Code mit den Zahnradparametern generieren
+            // 2. Einen Download-Link erstellen
         }
     </script>
 </body>
