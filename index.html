@@ -1,249 +1,85 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>iPhone Bewegungserfassung (Raumtracking)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, sans-serif; }
-        #container { position: absolute; width: 100%; height: 100%; }
-        #ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background: rgba(255,255,255,0.8);
-            padding: 10px;
-            border-radius: 10px;
-        }
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            background: #007AFF;
-            color: white;
-        }
-        button:disabled { background: #cccccc; }
-        #status { margin-top: 10px; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <title>3D Punktwolke Visualisierung</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #input-area {
+      margin-bottom: 20px;
+    }
+    input {
+      width: 60px;
+      margin-right: 10px;
+    }
+    #plot {
+      width: 100%;
+      height: 600px;
+    }
+  </style>
 </head>
 <body>
-    <div id="container"></div>
-    <div id="ui">
-        <button id="startBtn">Start</button>
-        <button id="stopBtn" disabled>Stop</button>
-        <button id="downloadBtn" disabled>Download STL</button>
-        <div id="status">Bereit</div>
-        <div id="pointCount">Punkte: 0</div>
-    </div>
+  <h2>3D Punktwolke Visualisierung</h2>
+  <div id="input-area">
+    <label>X: <input type="number" id="x-input" step="any"></label>
+    <label>Y: <input type="number" id="y-input" step="any"></label>
+    <label>Z: <input type="number" id="z-input" step="any"></label>
+    <button onclick="addPoint()">Punkt hinzufügen</button>
+  </div>
 
-    <script>
-        // Globale Variablen
-        let isRecording = false;
-        let points = [];
-        let lastTimestamp = 0;
-        let velocity = new THREE.Vector3();
-        let position = new THREE.Vector3();
-        
-        // Three.js Variablen
-        let scene, camera, renderer, controls, pointCloud;
-        
-        init();
-        
-        function init() {
-            // Three.js Scene setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 5;
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('container').appendChild(renderer.domElement);
-            
-            // Controls
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            
-            // Licht
-            const light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(1, 1, 1);
-            scene.add(light);
-            
-            const ambientLight = new THREE.AmbientLight(0x404040);
-            scene.add(ambientLight);
-            
-            // Achsen-Helfer
-            const axesHelper = new THREE.AxesHelper(1);
-            scene.add(axesHelper);
-            
-            // Punktwolke initialisieren
-            const pointGeometry = new THREE.BufferGeometry();
-            const pointMaterial = new THREE.PointsMaterial({
-                color: 0xff0000,
-                size: 0.05,
-                sizeAttenuation: true
-            });
-            
-            pointCloud = new THREE.Points(pointGeometry, pointMaterial);
-            scene.add(pointCloud);
-            
-            // Event Listener
-            window.addEventListener('resize', onWindowResize);
-            document.getElementById('startBtn').addEventListener('click', startRecording);
-            document.getElementById('stopBtn').addEventListener('click', stopRecording);
-            document.getElementById('downloadBtn').addEventListener('click', downloadSTL);
-            
-            // Animation Loop
-            animate();
-        }
-        
-        function startRecording() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                // iOS 13+ benötigt Berechtigung
-                DeviceMotionEvent.requestPermission()
-                    .then(response => {
-                        if (response === 'granted') {
-                            initRecording();
-                        } else {
-                            document.getElementById('status').textContent = 'Berechtigung verweigert';
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                initRecording();
-            }
-        }
-        
-        function initRecording() {
-            isRecording = true;
-            points = [];
-            velocity.set(0, 0, 0);
-            position.set(0, 0, 0);
-            lastTimestamp = 0;
-            
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('downloadBtn').disabled = true;
-            document.getElementById('status').textContent = 'Aufzeichnung läuft';
-            document.getElementById('pointCount').textContent = 'Punkte: 0';
-            
-            // Event Listener für Beschleunigung
-            window.addEventListener('devicemotion', handleMotion);
-        }
-        
-        function stopRecording() {
-            isRecording = false;
-            window.removeEventListener('devicemotion', handleMotion);
-            
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('downloadBtn').disabled = false;
-            document.getElementById('status').textContent = 'Aufzeichnung gestoppt';
-            
-            updatePointCloud();
-        }
-        
-        function handleMotion(event) {
-            if (!isRecording) return;
-            
-            const acceleration = event.accelerationIncludingGravity;
-            const rotationRate = event.rotationRate;
-            const timestamp = event.timeStamp || Date.now();
-            
-            // Zeitdifferenz berechnen (in Sekunden)
-            const dt = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
-            lastTimestamp = timestamp;
-            
-            if (!dt || dt > 0.1) return; // Zu große Zeitdifferenzen ignorieren
-            
-            // Gravitation herausrechnen (nur lineare Beschleunigung nutzen)
-            const gravity = new THREE.Vector3(0, -9.81, 0); // Annahme: Gerät ist initial in aufrechter Position
-            const linearAcceleration = new THREE.Vector3(
-                acceleration.x - gravity.x,
-                acceleration.y - gravity.y,
-                acceleration.z - gravity.z
-            );
-            
-            // Geschwindigkeit aktualisieren (v = v0 + a * dt)
-            velocity.add(linearAcceleration.clone().multiplyScalar(dt));
-            
-            // Position aktualisieren (s = s0 + v * dt)
-            position.add(velocity.clone().multiplyScalar(dt));
-            
-            // Punkt hinzufügen
-            points.push(position.clone());
-            document.getElementById('pointCount').textContent = `Punkte: ${points.length}`;
-            
-            // Punktwolke alle 10 Punkte aktualisieren
-            if (points.length % 10 === 0) {
-                updatePointCloud();
-            }
-        }
-        
-        function updatePointCloud() {
-            const positions = new Float32Array(points.length * 3);
-            for (let i = 0; i < points.length; i++) {
-                positions[i * 3] = points[i].x;
-                positions[i * 3 + 1] = points[i].y;
-                positions[i * 3 + 2] = points[i].z;
-            }
-            
-            pointCloud.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            pointCloud.geometry.attributes.position.needsUpdate = true;
-        }
-        
-        function downloadSTL() {
-            if (points.length === 0) return;
-            
-            // Erstelle ein Mesh aus den Punkten (hier sehr einfache Konvertierung)
-            const mergedGeometry = new THREE.BufferGeometry();
-            const sphereGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-            
-            for (let i = 0; i < points.length; i++) {
-                const sphere = sphereGeometry.clone();
-                sphere.translate(points[i].x, points[i].y, points[i].z);
-                
-                // Merge Geometries (vereinfacht)
-                if (i === 0) {
-                    mergedGeometry.copy(sphere);
-                } else {
-                    // (Hier müsste eine richtige Merge-Logik implementiert werden)
-                }
-            }
-            
-            // Export als STL
-            const exporter = new THREE.STLExporter();
-            const stlString = exporter.parse(new THREE.Mesh(mergedGeometry, new THREE.MeshBasicMaterial()));
-            
-            // Download
-            const blob = new Blob([stlString], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'bewegung_im_raum.stl';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-    </script>
+  <div id="plot"></div>
+
+  <script>
+    let xData = [];
+    let yData = [];
+    let zData = [];
+
+    function drawPlot() {
+      const trace = {
+        x: xData,
+        y: yData,
+        z: zData,
+        mode: 'markers',
+        marker: {
+          size: 5,
+          color: zData,
+          colorscale: 'Viridis',
+          opacity: 0.8
+        },
+        type: 'scatter3d'
+      };
+
+      const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 }
+      };
+
+      Plotly.newPlot('plot', [trace], layout);
+    }
+
+    function addPoint() {
+      const x = parseFloat(document.getElementById('x-input').value);
+      const y = parseFloat(document.getElementById('y-input').value);
+      const z = parseFloat(document.getElementById('z-input').value);
+
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        xData.push(x);
+        yData.push(y);
+        zData.push(z);
+        drawPlot();
+      } else {
+        alert("Bitte gültige Zahlen für X, Y und Z eingeben.");
+      }
+
+      document.getElementById('x-input').value = '';
+      document.getElementById('y-input').value = '';
+      document.getElementById('z-input').value = '';
+    }
+
+    drawPlot(); // Initial leer
+  </script>
 </body>
 </html>
