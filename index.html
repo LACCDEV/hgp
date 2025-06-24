@@ -3,397 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zahnrad-Konfigurator für CAD</title>
+    <title>Zahnradkonfigurator für CAD-Konstrukteure</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            color: #333;
+            background-color: #f5f5f5;
+        }
+        .configurator {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .controls {
-            flex: 1;
-            min-width: 300px;
-            background: #f9f9f9;
+            background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        .preview {
-            flex: 2;
-            min-width: 400px;
+        .input-section {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            gap: 15px;
         }
-        .gear-canvas {
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
-            max-width: 100%;
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         label {
-            display: block;
-            margin: 15px 0 5px;
             font-weight: bold;
+            color: #333;
         }
         input, select {
-            width: 100%;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box;
         }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            margin-top: 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+        #gear-preview {
             width: 100%;
+            height: 400px;
+            border: 1px solid #eee;
+            background-color: #fafafa;
         }
-        button:hover {
-            background-color: #2980b9;
-        }
-        .download-options {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .download-options button {
-            flex: 1;
-        }
-        .svg-btn {
-            background-color: #27ae60;
-        }
-        .svg-btn:hover {
-            background-color: #219653;
-        }
-        .dxf-btn {
-            background-color: #e67e22;
-        }
-        .dxf-btn:hover {
-            background-color: #d35400;
-        }
-        .error {
-            color: #e74c3c;
-            margin-top: 5px;
-            font-size: 14px;
-        }
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
+        svg {
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 <body>
-    <h1>Zahnrad-Konfigurator für CAD-Konstrukteure</h1>
-    
-    <div class="container">
-        <div class="controls">
-            <h2>Parameter</h2>
-            
-            <label for="module">Modul (mm):</label>
-            <input type="number" id="module" min="0.1" step="0.1" value="1" oninput="updateGear()">
-            
-            <label for="teeth">Zähnezahl:</label>
-            <input type="number" id="teeth" min="5" step="1" value="20" oninput="updateGear()">
-            
-            <label for="pressureAngle">Eingriffswinkel (Grad):</label>
-            <input type="number" id="pressureAngle" min="14.5" max="30" step="0.5" value="20" oninput="updateGear()">
-            
-            <label for="thickness">Dicke (mm):</label>
-            <input type="number" id="thickness" min="1" step="1" value="5" oninput="updateGear()">
-            
-            <label for="hubDiameter">Nabendurchmesser (mm):</label>
-            <input type="number" id="hubDiameter" min="0" step="1" value="10" oninput="updateGear()">
-            
-            <label for="boreDiameter">Bohrungsdurchmesser (mm):</label>
-            <input type="number" id="boreDiameter" min="0" step="0.1" value="5" oninput="updateGear()">
-            
-            <label for="keyway">Keilnut:</label>
-            <select id="keyway" onchange="updateGear()">
-                <option value="none">Keine</option>
-                <option value="din6885">DIN 6885</option>
-            </select>
-            
-            <div id="keywaySizeContainer" style="display: none;">
-                <label for="keywaySize">Keilnut Größe:</label>
-                <select id="keywaySize" onchange="updateGear()">
-                    <option value="3x1.8">3×1,8 mm</option>
-                    <option value="4x2.6">4×2,6 mm</option>
-                    <option value="5x3.0">5×3,0 mm</option>
-                    <option value="6x3.5">6×3,5 mm</option>
-                    <option value="8x4.0">8×4,0 mm</option>
-                    <option value="10x5.0">10×5,0 mm</option>
-                    <option value="12x5.0">12×5,0 mm</option>
+    <div class="configurator">
+        <!-- Eingabe-Parameter -->
+        <section class="input-section">
+            <h2>Zahnradparameter</h2>
+            <div class="input-group">
+                <label for="module">Modul (m):</label>
+                <input type="number" id="module" value="2" min="0.1" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="teeth">Zähnezahl (z):</label>
+                <input type="number" id="teeth" value="20" min="5" step="1">
+            </div>
+            <div class="input-group">
+                <label for="pressure-angle">Eingriffswinkel (°):</label>
+                <select id="pressure-angle">
+                    <option value="20">20° (Standard)</option>
+                    <option value="14.5">14.5°</option>
                 </select>
             </div>
-            
-            <button onclick="generateGear()">Zahnrad generieren</button>
-            
-            <div class="download-options">
-                <button class="svg-btn" onclick="downloadSVG()">Als SVG herunterladen</button>
-                <button class="dxf-btn" onclick="downloadDXF()">Als DXF herunterladen</button>
+            <div class="input-group">
+                <label for="gear-width">Breite (mm):</label>
+                <input type="number" id="gear-width" value="10" min="1" step="1">
             </div>
-            
-            <div id="error" class="error"></div>
-        </div>
-        
-        <div class="preview">
+            <div class="input-group">
+                <label for="gear-type">Verzahnungstyp:</label>
+                <select id="gear-type">
+                    <option value="spur">Gerade (Stirnrad)</option>
+                    <option value="helical">Schrägverzahnung</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- 2D-Visualisierung -->
+        <section class="visualization">
             <h2>Vorschau</h2>
-            <canvas id="gearCanvas" class="gear-canvas" width="500" height="500"></canvas>
-            <div>
-                <strong>Technische Daten:</strong>
-                <div id="gearSpecs">Wird berechnet...</div>
+            <div id="gear-preview">
+                <svg id="gear-svg" viewBox="-100 -100 200 200"></svg>
             </div>
-        </div>
+        </section>
     </div>
 
-    <script>
-        // Globale Variablen
-        let gearData = null;
-        const canvas = document.getElementById('gearCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Initialisierung
-        document.addEventListener('DOMContentLoaded', function() {
-            updateGear();
-            document.getElementById('keyway').addEventListener('change', function() {
-                document.getElementById('keywaySizeContainer').style.display = 
-                    this.value === 'none' ? 'none' : 'block';
-            });
-        });
-        
-        // Zahnradparameter aktualisieren
-        function updateGear() {
-            const module = parseFloat(document.getElementById('module').value);
-            const teeth = parseInt(document.getElementById('teeth').value);
-            const pressureAngle = parseFloat(document.getElementById('pressureAngle').value);
-            
-            if (module <= 0 || teeth < 5) {
-                document.getElementById('error').textContent = 
-                    'Ungültige Eingabe: Modul muss > 0 und Zähnezahl ≥ 5 sein.';
-                return;
-            }
-            
-            document.getElementById('error').textContent = '';
-            
-            // Technische Daten berechnen
-            const pitchDiameter = module * teeth;
-            const addendum = module;
-            const dedendum = 1.25 * module;
-            const outerDiameter = pitchDiameter + 2 * addendum;
-            const rootDiameter = pitchDiameter - 2 * dedendum;
-            
-            // Technische Daten anzeigen
-            document.getElementById('gearSpecs').innerHTML = `
-                <p>Teilkreisdurchmesser: ${pitchDiameter.toFixed(2)} mm</p>
-                <p>Kopfkreisdurchmesser: ${outerDiameter.toFixed(2)} mm</p>
-                <p>Fußkreisdurchmesser: ${rootDiameter.toFixed(2)} mm</p>
-                <p>Zahnkopfhöhe: ${addendum.toFixed(2)} mm</p>
-                <p>Zahnfußhöhe: ${dedendum.toFixed(2)} mm</p>
-            `;
-            
-            // Skalierung für die Vorschau anpassen
-            const scale = Math.min(400 / outerDiameter, 1) * 0.8;
-            gearData = {
-                module,
-                teeth,
-                pressureAngle,
-                pitchDiameter,
-                addendum,
-                dedendum,
-                outerDiameter,
-                rootDiameter,
-                thickness: parseFloat(document.getElementById('thickness').value),
-                hubDiameter: parseFloat(document.getElementById('hubDiameter').value),
-                boreDiameter: parseFloat(document.getElementById('boreDiameter').value),
-                keyway: document.getElementById('keyway').value,
-                keywaySize: document.getElementById('keywaySize').value,
-                scale
-            };
-            
-            drawGearPreview();
-        }
-        
-        // Zahnrad in der Vorschau zeichnen
-        function drawGearPreview() {
-            if (!gearData) return;
-            
-            // Canvas leeren
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Koordinatenursprung in die Mitte setzen
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            
-            // Skalierung anwenden
-            const displayDiameter = gearData.outerDiameter * gearData.scale;
-            ctx.scale(gearData.scale, gearData.scale);
-            
-            // Zahnrad zeichnen
-            drawGear(ctx, gearData);
-            
-            ctx.restore();
-        }
-        
-        // Zahnrad zeichnen
-        function drawGear(ctx, data) {
-            // Nabendurchmesser und Bohrung zeichnen
-            if (data.hubDiameter > 0) {
-                ctx.beginPath();
-                ctx.arc(0, 0, data.hubDiameter / 2, 0, Math.PI * 2);
-                ctx.fillStyle = '#ddd';
-                ctx.fill();
-                ctx.strokeStyle = '#999';
-                ctx.lineWidth = 1 / data.scale;
-                ctx.stroke();
-            }
-            
-            if (data.boreDiameter > 0) {
-                ctx.beginPath();
-                ctx.arc(0, 0, data.boreDiameter / 2, 0, Math.PI * 2);
-                ctx.fillStyle = 'white';
-                ctx.fill();
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 1 / data.scale;
-                ctx.stroke();
-            }
-            
-            // Keilnut zeichnen (vereinfacht)
-            if (data.keyway === 'din6885' && data.boreDiameter > 0) {
-                const [width, height] = data.keywaySize.split('x').map(Number);
-                const radius = data.boreDiameter / 2;
-                const keywayDepth = height - radius * (1 - Math.cos(Math.asin(width / (2 * radius))));
-                
-                ctx.beginPath();
-                ctx.moveTo(width / 2, -radius);
-                ctx.lineTo(width / 2, -radius + keywayDepth);
-                ctx.lineTo(-width / 2, -radius + keywayDepth);
-                ctx.lineTo(-width / 2, -radius);
-                ctx.closePath();
-                ctx.fillStyle = 'white';
-                ctx.fill();
-                ctx.strokeStyle = '#666';
-                ctx.stroke();
-            }
-            
-            // Zähne zeichnen
-            ctx.beginPath();
-            const angle
+<script>
+    // DOM-Elemente
+    const moduleInput = document.getElementById('module');
+    const teethInput = document.getElementById('teeth');
+    const pressureAngleInput = document.getElementById('pressure-angle');
+    const svg = document.getElementById('gear-svg');
 
-            // Zähne zeichnen
-            ctx.beginPath();
-            const angleStep = (2 * Math.PI) / data.teeth;
-            const halfAngleStep = angleStep / 2;
-            const pressureAngleRad = data.pressureAngle * Math.PI / 180;
-            
-            // Zahnform-Parameter
-            const baseRadius = (data.pitchDiameter / 2) * Math.cos(pressureAngleRad);
-            const addendumRadius = (data.pitchDiameter / 2) + data.addendum;
-            const dedendumRadius = (data.pitchDiameter / 2) - data.dedendum;
-            
-            // Zahnflanken als Evolvente approximieren
-            for (let i = 0; i <= data.teeth; i++) {
-                const angle = i * angleStep;
-                const cosAngle = Math.cos(angle);
-                const sinAngle = Math.sin(angle);
-                
-                // Zahnfuß (beginnend bei der Mitte zwischen zwei Zähnen)
-                if (i === 0) {
-                    const startAngle = -halfAngleStep;
-                    const x = dedendumRadius * Math.cos(startAngle);
-                    const y = dedendumRadius * Math.sin(startAngle);
-                    ctx.moveTo(x, y);
-                }
-                
-                // Linke Flanke (Evolvente)
-                for (let j = 0; j <= 5; j++) {
-                    const t = j / 5 * Math.PI / 2;
-                    const x = baseRadius * (Math.cos(t) + t * Math.sin(t));
-                    const y = baseRadius * (Math.sin(t) - t * Math.cos(t));
-                    const rotatedX = x * cosAngle - y * sinAngle;
-                    const rotatedY = x * sinAngle + y * cosAngle;
-                    
-                    if (j === 0) {
-                        ctx.lineTo(rotatedX, rotatedY);
-                    } else {
-                        ctx.lineTo(rotatedX, rotatedY);
-                    }
-                }
-                
-                // Zahnkopf (Kreisbogen)
-                const headAngle1 = angle + halfAngleStep;
-                const headAngle2 = angle + angleStep - halfAngleStep;
-                ctx.arc(0, 0, addendumRadius, headAngle1, headAngle2);
-                
-                // Rechte Flanke (Evolvente, gespiegelt)
-                for (let j = 5; j >= 0; j--) {
-                    const t = j / 5 * Math.PI / 2;
-                    const x = baseRadius * (Math.cos(t) + t * Math.sin(t));
-                    const y = -baseRadius * (Math.sin(t) - t * Math.cos(t));
-                    const rotatedX = x * cosAngle - y * sinAngle;
-                    const rotatedY = x * sinAngle + y * cosAngle;
-                    ctx.lineTo(rotatedX, rotatedY);
-                }
-            }
-            
-            // Zahnrad füllen und konturieren
-            ctx.closePath();
-            ctx.fillStyle = '#a5d8ff';
-            ctx.fill();
-            ctx.strokeStyle = '#2c3e50';
-            ctx.lineWidth = 1 / data.scale;
-            ctx.stroke();
-        }
+    // Zahnrad zeichnen
+    function drawGear() {
+        const m = parseFloat(moduleInput.value);
+        const z = parseInt(teethInput.value);
+        const alpha = parseFloat(pressureAngleInput.value) * Math.PI / 180; // Umrechnung in Radiant
+
+        // Kritische Maße berechnen
+        const d = m * z; // Teilkreisdurchmesser
+        const db = d * Math.cos(alpha); // Grundkreisdurchmesser
+        const da = d + 2 * m; // Kopfkreisdurchmesser
+        const df = d - 2.5 * m; // Fußkreisdurchmesser
+
+        // SVG leeren
+        svg.innerHTML = '';
+
+        // Zahnradumrisse zeichnen
+        const gearGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         
-        // Zahnrad generieren (für Export)
-        function generateGear() {
-            updateGear();
-            if (!gearData) return;
-            
-            // Hier würden Sie die Daten für den Export vorbereiten
-            alert('Zahnrad wurde generiert! Bereit für den Export.');
+        // Fußkreis (grau)
+        const rootCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        rootCircle.setAttribute('cx', '0');
+        rootCircle.setAttribute('cy', '0');
+        rootCircle.setAttribute('r', df / 2);
+        rootCircle.setAttribute('fill', '#e0e0e0');
+        gearGroup.appendChild(rootCircle);
+
+        // Teilkreis (gestrichelt)
+        const pitchCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        pitchCircle.setAttribute('cx', '0');
+        pitchCircle.setAttribute('cy', '0');
+        pitchCircle.setAttribute('r', d / 2);
+        pitchCircle.setAttribute('stroke', '#666');
+        pitchCircle.setAttribute('stroke-dasharray', '5,5');
+        pitchCircle.setAttribute('fill', 'none');
+        gearGroup.appendChild(pitchCircle);
+
+        // Kopfkreis (durchgezogen)
+        const tipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        tipCircle.setAttribute('cx', '0');
+        tipCircle.setAttribute('cy', '0');
+        tipCircle.setAttribute('r', da / 2);
+        tipCircle.setAttribute('stroke', '#333');
+        tipCircle.setAttribute('fill', 'none');
+        gearGroup.appendChild(tipCircle);
+
+        // Zähne zeichnen (vereinfachte Evolvente)
+        for (let i = 0; i < z; i++) {
+            const angle = (i * 2 * Math.PI) / z;
+            const tooth = drawTooth(m, z, alpha, angle);
+            gearGroup.appendChild(tooth);
         }
-        
-        // Als SVG herunterladen
-        function downloadSVG() {
-            if (!gearData) return;
-            
-            // Hier würden Sie den SVG-Code generieren
-            alert('SVG-Export wird vorbereitet...');
-            // In einer echten Implementierung würden Sie hier:
-            // 1. SVG-Code mit den Zahnradparametern generieren
-            // 2. Einen Download-Link erstellen
-        }
-        
-        // Als DXF herunterladen
-        function downloadDXF() {
-            if (!gearData) return;
-            
-            // Hier würden Sie den DXF-Code generieren
-            alert('DXF-Export wird vorbereitet...');
-            // In einer echten Implementierung würden Sie:
-            // 1. DXF-Code mit den Zahnradparametern generieren
-            // 2. Einen Download-Link erstellen
-        }
-    </script>
+
+        svg.appendChild(gearGroup);
+    }
+
+    // Einzelnen Zahn zeichnen (vereinfacht)
+    function drawTooth(m, z, alpha, angle) {
+        const d = m * z;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+        // Vereinfachte Zahnform (keine echte Evolvente)
+        const x1 = (d / 2 + m) * Math.cos(angle - 0.2);
+        const y1 = (d / 2 + m) * Math.sin(angle - 0.2);
+        const x2 = (d / 2 + m) * Math.cos(angle + 0.2);
+        const y2 = (d / 2 + m) * Math.sin(angle + 0.2);
+        const x3 = (d / 2 - 1.25 * m) * Math.cos(angle + 0.25);
+        const y3 = (d / 2 - 1.25 * m) * Math.sin(angle + 0.25);
+        const x4 = (d / 2 - 1.25 * m) * Math.cos(angle - 0.25);
+        const y4 = (d / 2 - 1.25 * m) * Math.sin(angle - 0.25);
+
+        path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`);
+        path.setAttribute('fill', '#aaa');
+        path.setAttribute('stroke', '#333');
+        return path;
+    }
+
+    // Event-Listener für Live-Updates
+    moduleInput.addEventListener('input', drawGear);
+    teethInput.addEventListener('input', drawGear);
+    pressureAngleInput.addEventListener('change', drawGear);
+
+    // Initiales Zeichnen
+    drawGear();
+</script>
 </body>
 </html>
