@@ -1,190 +1,116 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zahnradkonfigurator für CAD-Konstrukteure</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .configurator {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .input-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        label {
-            font-weight: bold;
-            color: #333;
-        }
-        input, select {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        #gear-preview {
-            width: 100%;
-            height: 400px;
-            border: 1px solid #eee;
-            background-color: #fafafa;
-        }
-        svg {
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Countdown Timer</title>
+  <style>
+    :root {
+      font-family: 'Segoe UI', sans-serif;
+      --bg: #f9f9f9;
+      --fg: #222;
+      --accent: #6366f1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --fg: #fff;
+        --accent: #818cf8;
+      }
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .timer-display {
+      font-size: 5rem;
+      font-weight: 600;
+      margin: 1rem 0;
+      letter-spacing: 2px;
+    }
+
+    input[type="time"] {
+      font-size: 1.2rem;
+      padding: 0.4rem 0.6rem;
+      border: 2px solid var(--accent);
+      border-radius: 0.5rem;
+      background: transparent;
+      color: var(--fg);
+      outline: none;
+    }
+
+    button {
+      margin-top: 1rem;
+      font-size: 1rem;
+      padding: 0.6rem 1rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #4f46e5;
+    }
+  </style>
 </head>
 <body>
-    <div class="configurator">
-        <!-- Eingabe-Parameter -->
-        <section class="input-section">
-            <h2>Zahnradparameter</h2>
-            <div class="input-group">
-                <label for="module">Modul (m):</label>
-                <input type="number" id="module" value="2" min="0.1" step="0.1">
-            </div>
-            <div class="input-group">
-                <label for="teeth">Zähnezahl (z):</label>
-                <input type="number" id="teeth" value="20" min="5" step="1">
-            </div>
-            <div class="input-group">
-                <label for="pressure-angle">Eingriffswinkel (°):</label>
-                <select id="pressure-angle">
-                    <option value="20">20° (Standard)</option>
-                    <option value="14.5">14.5°</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label for="gear-width">Breite (mm):</label>
-                <input type="number" id="gear-width" value="10" min="1" step="1">
-            </div>
-            <div class="input-group">
-                <label for="gear-type">Verzahnungstyp:</label>
-                <select id="gear-type">
-                    <option value="spur">Gerade (Stirnrad)</option>
-                    <option value="helical">Schrägverzahnung</option>
-                </select>
-            </div>
-        </section>
+  <h1>Set Countdown End Time</h1>
+  <input type="time" id="endTimeInput">
+  <button onclick="startCountdown()">Start</button>
+  <div class="timer-display" id="countdown">--:--</div>
 
-        <!-- 2D-Visualisierung -->
-        <section class="visualization">
-            <h2>Vorschau</h2>
-            <div id="gear-preview">
-                <svg id="gear-svg" viewBox="-100 -100 200 200"></svg>
-            </div>
-        </section>
-    </div>
+  <script>
+    let timerInterval;
 
-<script>
-    // DOM-Elemente
-    const moduleInput = document.getElementById('module');
-    const teethInput = document.getElementById('teeth');
-    const pressureAngleInput = document.getElementById('pressure-angle');
-    const svg = document.getElementById('gear-svg');
+    function startCountdown() {
+      clearInterval(timerInterval);
+      const input = document.getElementById("endTimeInput").value;
+      if (!input) return;
 
-    // Zahnrad zeichnen
-    function drawGear() {
-        const m = parseFloat(moduleInput.value);
-        const z = parseInt(teethInput.value);
-        const alpha = parseFloat(pressureAngleInput.value) * Math.PI / 180; // Umrechnung in Radiant
+      const [h, m] = input.split(":");
+      const now = new Date();
+      const end = new Date(now);
+      end.setHours(parseInt(h), parseInt(m), 0, 0);
 
-        // Kritische Maße berechnen
-        const d = m * z; // Teilkreisdurchmesser
-        const db = d * Math.cos(alpha); // Grundkreisdurchmesser
-        const da = d + 2 * m; // Kopfkreisdurchmesser
-        const df = d - 2.5 * m; // Fußkreisdurchmesser
+      if (end < now) {
+        end.setDate(end.getDate() + 1); // if time is earlier, use tomorrow
+      }
 
-        // SVG leeren
-        svg.innerHTML = '';
-
-        // Zahnradumrisse zeichnen
-        const gearGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        
-        // Fußkreis (grau)
-        const rootCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        rootCircle.setAttribute('cx', '0');
-        rootCircle.setAttribute('cy', '0');
-        rootCircle.setAttribute('r', df / 2);
-        rootCircle.setAttribute('fill', '#e0e0e0');
-        gearGroup.appendChild(rootCircle);
-
-        // Teilkreis (gestrichelt)
-        const pitchCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        pitchCircle.setAttribute('cx', '0');
-        pitchCircle.setAttribute('cy', '0');
-        pitchCircle.setAttribute('r', d / 2);
-        pitchCircle.setAttribute('stroke', '#666');
-        pitchCircle.setAttribute('stroke-dasharray', '5,5');
-        pitchCircle.setAttribute('fill', 'none');
-        gearGroup.appendChild(pitchCircle);
-
-        // Kopfkreis (durchgezogen)
-        const tipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        tipCircle.setAttribute('cx', '0');
-        tipCircle.setAttribute('cy', '0');
-        tipCircle.setAttribute('r', da / 2);
-        tipCircle.setAttribute('stroke', '#333');
-        tipCircle.setAttribute('fill', 'none');
-        gearGroup.appendChild(tipCircle);
-
-        // Zähne zeichnen (vereinfachte Evolvente)
-        for (let i = 0; i < z; i++) {
-            const angle = (i * 2 * Math.PI) / z;
-            const tooth = drawTooth(m, z, alpha, angle);
-            gearGroup.appendChild(tooth);
+      timerInterval = setInterval(() => {
+        const now = new Date();
+        const diff = end - now;
+        if (diff <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById("countdown").textContent = "00:00";
+          return;
         }
 
-        svg.appendChild(gearGroup);
+        const minutes = String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, '0');
+        const hours = String(Math.floor((diff / 1000 / 60 / 60))).padStart(2, '0');
+        const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+
+        document.getElementById("countdown").textContent =
+          (hours > 0 ? `${hours}:` : "") + `${minutes}:${seconds}`;
+      }, 1000);
     }
-
-    // Einzelnen Zahn zeichnen (vereinfacht)
-    function drawTooth(m, z, alpha, angle) {
-        const d = m * z;
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-
-        // Vereinfachte Zahnform (keine echte Evolvente)
-        const x1 = (d / 2 + m) * Math.cos(angle - 0.2);
-        const y1 = (d / 2 + m) * Math.sin(angle - 0.2);
-        const x2 = (d / 2 + m) * Math.cos(angle + 0.2);
-        const y2 = (d / 2 + m) * Math.sin(angle + 0.2);
-        const x3 = (d / 2 - 1.25 * m) * Math.cos(angle + 0.25);
-        const y3 = (d / 2 - 1.25 * m) * Math.sin(angle + 0.25);
-        const x4 = (d / 2 - 1.25 * m) * Math.cos(angle - 0.25);
-        const y4 = (d / 2 - 1.25 * m) * Math.sin(angle - 0.25);
-
-        path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`);
-        path.setAttribute('fill', '#aaa');
-        path.setAttribute('stroke', '#333');
-        return path;
-    }
-
-    // Event-Listener für Live-Updates
-    moduleInput.addEventListener('input', drawGear);
-    teethInput.addEventListener('input', drawGear);
-    pressureAngleInput.addEventListener('change', drawGear);
-
-    // Initiales Zeichnen
-    drawGear();
-</script>
+  </script>
 </body>
 </html>
